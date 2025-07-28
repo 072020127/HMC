@@ -85,7 +85,7 @@ status_t Communicator::send(std::string ip, size_t ptr_bias, size_t size, ConnTy
       ip, [ptr_bias, size](Endpoint *ep) -> status_t {
         if (!ep)
           return status_t::ERROR;
-        return ep->writeData(ptr_bias, size); // 传递返回状态
+        return ep->sendData(ptr_bias, size); // 传递返回状态
       });
 };
 

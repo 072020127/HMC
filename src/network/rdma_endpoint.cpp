@@ -41,7 +41,7 @@ status_t RDMAEndpoint::writeData(size_t data_bias, size_t size) {
     logError("Error for post_write");
     return status_t::ERROR;
   }
-  if (pollCompletion(0) != status_t::SUCCESS) {
+  if (pollCompletion(1) != status_t::SUCCESS) {
     logError("Error for waiting writeData finished");
     return status_t::ERROR;
   }
@@ -66,7 +66,7 @@ status_t RDMAEndpoint::readData(size_t data_bias, size_t size) {
     logError("Error for post_read");
     return status_t::ERROR;
   }
-  if (pollCompletion(0) != status_t::SUCCESS) {
+  if (pollCompletion(1) != status_t::SUCCESS) {
     logError("Error for waiting writeData finished");
     return status_t::ERROR;
   }
@@ -117,6 +117,7 @@ status_t RDMAEndpoint::pollCompletion(int num_completions_to_process) {
   }
 
   // 分配足够的空间来存储多个完成事件
+  
   const int max_wcs = cq_capacity; // 可根据实际情况调整大小
   std::vector<struct ibv_wc> wcs(max_wcs);
 
@@ -128,17 +129,37 @@ status_t RDMAEndpoint::pollCompletion(int num_completions_to_process) {
     return status_t::SUCCESS;
   }
 
+  std::cout << "CQ capacity = " << cq_capacity << "\n";
   // 指定个数，则按照个数处理
   int total_processed = 0;
   while (total_processed < num_completions_to_process) {
     // 尽可能多地获取完成事件
+    if (cq == nullptr) {
+      logError("Completion queue is null, check if endpoint is ok?");
+      return status_t::ERROR;
+    }
+    if (max_wcs == 0) {
+      logError("max_wcs is null, check if endpoint is ok?");
+      return status_t::ERROR;
+    }
+    if (wcs.data() == nullptr) {
+      logError("max_wcs is null, check if endpoint is ok?");
+      return status_t::ERROR;
+    }
+    
+    std::cout<<"ibv_poll_cq(cq, max_wcs, wcs.data())\n";
     int num_completions = ibv_poll_cq(cq, max_wcs, wcs.data());
-
+    std::cout<<"\tNum_completions:  "<<num_completions << "\n";
     if (num_completions < 0) {
       logError("Failed to poll completion queue");
       return status_t::ERROR;
     }
 
+    // 如果没有更多的完成事件，则退出循环
+    if (num_completions == 0) {
+        continue;
+    }
+    std::cout<<"\tNumewqeqwewqetions123123:\n";
     for (int i = 0;
          i < num_completions && total_processed < num_completions_to_process;
          ++i) {
@@ -181,17 +202,9 @@ status_t RDMAEndpoint::pollCompletion(int num_completions_to_process) {
           break;
         }
         return status_t::ERROR;
-      } else {
-        // 处理成功的完成事件
-        // logDebug("Completion event processed successfully");
       }
-
+      std::cout<<"\tfinsh one\n";
       total_processed++;
-    }
-
-    // 如果没有更多的完成事件，则退出循环
-    if (num_completions == 0) {
-      break;
     }
   }
 
@@ -409,6 +422,30 @@ status_t RDMAEndpoint::uhm_recv(void *output_buffer, const size_t buffer_size,
   return status_t::SUCCESS;
 }
 
+status_t RDMAEndpoint::sendData(size_t data_bias, size_t size) {
+    if (data_bias + size > buffer->buffer_size) {
+        logError("Invalid data bias and size: buffer_size %zu, data_bias+size %zu",
+                 buffer->buffer_size, data_bias + size);
+        return status_t::ERROR;
+    }
+    // post Recv
+    if (sendDataNB(data_bias, size) != status_t::SUCCESS) {
+        logError("Error when posting send");
+        return status_t::ERROR;
+    }
+    // 等待 Recv 完成
+    if (pollCompletion(1) != status_t::SUCCESS) {
+        logError("Error waiting for sendData finished");
+        return status_t::ERROR;
+    }
+    return status_t::SUCCESS;
+}
+
+status_t RDMAEndpoint::sendDataNB(size_t data_bias, size_t size) {
+    void* localAddr = static_cast<char*>(buffer->ptr) + data_bias;
+    return postSend(localAddr, static_cast<uint32_t>(size), buffer_mr, true);
+}
+
 status_t RDMAEndpoint::recvData(size_t data_bias, size_t size) {
     if (data_bias + size > buffer->buffer_size) {
         logError("Invalid data bias and size: buffer_size %zu, data_bias+size %zu",
@@ -491,6 +528,7 @@ status_t RDMAEndpoint::postSend(void *addr, size_t length, struct ibv_mr *mr,
   sge.lkey = mr->lkey;
 
   wr.wr_id = 0;
+  wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
@@ -515,6 +553,7 @@ status_t RDMAEndpoint::postRecv(void *addr, size_t length, struct ibv_mr *mr) {
   sge.lkey = mr->lkey;
 
   wr.wr_id = 0;
+  this->init_wr = (this->init_wr + 1) % this->max_wr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
 

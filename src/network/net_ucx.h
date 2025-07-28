@@ -17,9 +17,11 @@ public:
 
   status_t writeData(size_t data_bias, size_t size) override;
   status_t readData(size_t data_bias, size_t size) override;
+  status_t sendData(size_t data_bias, size_t size) override;
   status_t recvData(size_t data_bias, size_t size) override;
 
   status_t writeDataNB(size_t data_bias, size_t size) override;
+  status_t sendDataNB(size_t data_bias, size_t size) override;
   status_t readDataNB(size_t data_bias, size_t size) override;
   status_t recvDataNB(size_t data_bias, size_t size) override;
   status_t pollCompletion(int num_completions_to_process) override;

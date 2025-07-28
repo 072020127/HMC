@@ -149,7 +149,8 @@ void recv_channel_slice_g2h2g(Context ctx) {
 // 接收函数：无需操作，被动接收 RDMA Write
 void recv_channel_slice_rdma_cpu(Context ctx) {
   gpu_comm->recv(client_ip, 0, ctx.size);
-  wait_for_control_message(ctrl_socket_fd);
+  // wait_for_control_message(ctrl_socket_fd);
+  std::cout<<"2\n";
 }
 
 // 获取运行模式
@@ -168,6 +169,7 @@ std::string get_mode_from_args(int argc, char* argv[]) {
   }
   return "uhm"; // 默认模式
 }
+
 
 int main(int argc, char* argv[]) {
   FLAGS_colorlogtostderr = true;
@@ -207,7 +209,9 @@ int main(int argc, char* argv[]) {
   else if (mode == "rdma_cpu") recv_func = recv_channel_slice_rdma_cpu;
   else recv_func = recv_channel_slice_uhm;
 
-  for (int power = 3; power <= 26; ++power) {
+  sleep(3);
+
+  for (int power = 3; power <= 4; ++power) {
     const size_t total_size = std::pow(2, power);
     std::vector<uint8_t> host_data(total_size);
     void* gpu_ptr;
@@ -221,8 +225,8 @@ int main(int argc, char* argv[]) {
     };
     
     auto start_time = std::chrono::high_resolution_clock::now();
-    recv_func(ctx);
     LOG(INFO) << "1";
+    recv_func(ctx);
     auto end_time = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> duration = end_time - start_time;

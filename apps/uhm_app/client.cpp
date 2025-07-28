@@ -179,6 +179,7 @@ void send_channel_slice_g2h2g(Context ctx) {
 
 // 主动 RDMA Write
 void send_channel_slice_rdma_cpu(Context ctx) {
+  std::cout<<"1\n";
   const size_t chunk_size = buffer_size / 2;
   size_t remaining = ctx.size;
   size_t num_chunks = (ctx.size + chunk_size - 1) / chunk_size;
@@ -195,10 +196,10 @@ void send_channel_slice_rdma_cpu(Context ctx) {
 
     total_time += duration_cast<microseconds>(end - start).count();
   }
-
-  if (!send_control_message("Finished")) {
-    std::cerr << "Send control message failed" << std::endl;
-  }
+  sleep(3);
+  // if (!send_control_message("Finished")) {
+  //   std::cerr << "Send control message failed" << std::endl;
+  // }
 }
 
 std::string get_mode_from_args(int argc, char* argv[]) {
@@ -258,9 +259,9 @@ int main(int argc, char* argv[]) {
   }
   csv_file.close();
 
-  sleep(3);
+  sleep(6);
 
-  for (int power = 2; power <= 26; ++power) { // 暂时有bug，发送端多发一次，即接受端的缓冲区大一些做测试，这里是2，服务端为3
+  for (int power = 3; power <= 3; ++power) { // 暂时有bug，发送端多发一次，即接受端的缓冲区大一些做测试，这里是2，服务端为3
     size_t total_size = pow(2, power);
     std::vector<uint8_t> host_data(total_size, 'A');
 
