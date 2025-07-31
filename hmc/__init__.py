@@ -1,1 +1,1 @@
-from.hmc import *
+from hmc import *
