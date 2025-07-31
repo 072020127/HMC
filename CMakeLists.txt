@@ -24,6 +24,7 @@ include(FindMUSA) # <--- 加入 MUSA
 if(ROCM_FOUND)
     add_definitions(-DENABLE_ROCM)
     set(CMAKE_CXX_COMPILER "hipcc" CACHE STRING "C++ compiler" FORCE)
+    include_directories(${ROCM_INCLUDE_DIRS})
     enable_language(HIP)
     add_definitions(-D__HIP_PLATFORM_AMD__)
 elseif(CUDA_FOUND)
